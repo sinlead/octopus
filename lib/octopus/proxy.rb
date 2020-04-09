@@ -4,7 +4,7 @@ require 'octopus/load_balancing/round_robin'
 
 module Octopus
   class Proxy
-    attr_accessor :config, :sharded
+    attr_accessor :config, :sharded, :shards
 
     CURRENT_MODEL_KEY = 'octopus.current_model'.freeze
     CURRENT_SHARD_KEY = 'octopus.current_shard'.freeze
@@ -353,6 +353,10 @@ module Octopus
       send_queries_to_balancer(@slave_groups[current_slave_group], method, *args, &block)
     end
 
+    def current_model_replicated?
+      @replicated && (current_model.try(:replicated) || fully_replicated?)
+    end
+
     protected
 
     # Ensure that a single failing slave doesn't take down the entire application
@@ -433,10 +437,6 @@ module Octopus
     # Try to use slaves if and only if `replicated: true` is specified in `shards.yml` and no slaves groups are defined
     def should_send_queries_to_replicated_databases?(method)
       @replicated && method.to_s =~ /select/ && !block && !slaves_grouped?
-    end
-
-    def current_model_replicated?
-      @replicated && (current_model.try(:replicated) || fully_replicated?)
     end
 
     def send_queries_to_selected_slave(method, *args, &block)
